@@ -1,5 +1,5 @@
 
 # 忽略特定目录
 /build/
-
+/.cache/
 logs/*
