@@ -1,0 +1,11 @@
+
+
+lua_path=/home/ouyangjun/code/github/onbnet/test/?.lua;/home/ouyangjun/code/github/onbnet/lualib/?.lua
+
+lua_cpath=/home/ouyangjun/code/github/onbnet/build/libclib/?.so
+
+lua_service=/home/ouyangjun/code/github/onbnet/service/?.lua
+
+max_connect=1024
+threads=2
+bootstrap=main
