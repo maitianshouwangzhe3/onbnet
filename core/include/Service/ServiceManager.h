@@ -22,6 +22,7 @@ public:
     void Update();
     void CloseService(uint32_t serviceId);
     bool Send(std::shared_ptr<Message> msg);
+    bool Send(uint32_t serviceId, std::shared_ptr<Message> msg);
     int newService(const char* serviceName);
     void SetQueue(ProducerConsumerQueue<Service*>* q);
 

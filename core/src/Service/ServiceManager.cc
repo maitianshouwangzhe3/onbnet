@@ -65,7 +65,17 @@ void ServiceManager::CloseService(uint32_t serviceId) {
 }
 
 bool ServiceManager::Send(std::shared_ptr<Message> msg) {
-    auto S = mServiceVector[msg->session];
+    auto S = mServiceVector[msg->source];
+    if (S) {
+        S->PushMessage(msg);
+        queue->Push(S);
+        return true;
+    }
+    return false;
+}
+
+bool ServiceManager::Send(uint32_t serviceId, std::shared_ptr<Message> msg) {
+    auto S = mServiceVector[serviceId];
     if (S) {
         S->PushMessage(msg);
         queue->Push(S);
@@ -82,6 +92,7 @@ int ServiceManager::newService(const char* serviceName) {
     service->servicePath = servicePath;
     service->Init();
     mServiceVector[service->ServiceId] = service;
+    std::cout << "new service " << serviceName << " " << service->ServiceId << std::endl;
     return service->ServiceId;
 }
 

@@ -7,14 +7,7 @@
 #include <iostream>
 #include <memory>
 
-// LUA_EXPORT_CLASS_BEGIN(Service)
-// // LUA_EXPORT_METHOD(Init)
-// // LUA_EXPORT_METHOD(Start)
-// LUA_EXPORT_METHOD(test)
-// LUA_EXPORT_PROPERTY(ServiceId)
-// LUA_EXPORT_CLASS_END()
-
-Service::Service(std::string fileName): FileName(fileName) {
+Service::Service(std::string fileName): FileName(fileName), session(10) {
 
 }
 
@@ -33,22 +26,9 @@ void Service::Init() {
 }
 
 void Service::Start() {
-    //调用Lua函数
-    // lua_getglobal(LuaState->LuaState, "OnInit"); 
-    // lua_pushinteger(LuaState->LuaState, 1); 
-    // int isok = lua_pcall(LuaState->LuaState, 1, 0, 0);
-    // if(isok != 0){ //成功返回值为0，否则代表失败.
-    //     std::cout << "call lua OnInit fail " << lua_tostring(LuaState->LuaState, -1) << std::endl;
-    // }
-
     while (!gqueue.Empty()) {
-        // Message m;
-        // gqueue.Pop(m);
-
         std::shared_ptr<Message> msg = gqueue.PopPtr();
-        std::cout << "Service::Start" << std::endl;
         (*LuaState)(msg);
-        // (*LuaState)(m.type, m.session, m.source, m.data, m.sz);
     }
 }
 
@@ -66,4 +46,8 @@ Service* GetService(lua_State* L) {
     intptr_t v = 0;
     memcpy(&v, lua_getextraspace(L), LUA_EXTRASPACE);
     return reinterpret_cast<Service*>(v);
+}
+
+uint64_t Service::GetSession() {
+    return session++;
 }

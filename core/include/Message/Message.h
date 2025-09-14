@@ -42,4 +42,5 @@ public:
     int session;
     uint32_t source;
     size_t sz;
+    bool is_free;
 };

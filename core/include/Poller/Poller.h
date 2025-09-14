@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 enum class EventType {
@@ -10,7 +11,12 @@ enum class EventType {
 };
 
 struct Event {
-    EventType event;
+    Event() {
+        event = 0;
+        fd = -1;
+        ptr = nullptr;
+    }
+    uint32_t event;
     int fd;
     void* ptr;
 };
@@ -22,13 +28,15 @@ public:
 
     int Poll(std::vector<Event>& events, int timeout = -1);
 
-    int AddEventRead(int fd, void* data = nullptr, bool isEt = true);
+    int AddEventRead(int fd, bool isEt = true);
 
-    int AddEventWrite(int fd, void* data = nullptr, bool isEt = true);
+    int AddEventWrite(int fd, bool isEt = true);
 
-    int ModEventRead(int fd, void* data = nullptr, bool isEt = true);
+    int ModEventRead(int fd, bool isEt = true);
 
-    int ModEventWrite(int fd, void* data = nullptr, bool isEt = true);
+    int ModEventWrite(int fd, bool isEt = true);
+
+    int ModEventReadWrite(int fd, bool isEt = true);
 
     int DelEvent(int fd);
 private:

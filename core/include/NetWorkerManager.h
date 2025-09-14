@@ -33,6 +33,10 @@ public:
 
     int eventRead(int fd, bool isEt = true);
 
+    int eventModReadWrite(int fd, bool isEt = true);
+
+    int eventModRead(int fd, bool isEt = true);
+
 private:
     int mMaxConnect;
     std::vector<std::shared_ptr<Connect>> mConnects;

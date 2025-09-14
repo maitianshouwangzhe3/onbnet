@@ -12,6 +12,8 @@ public:
 
     virtual std::shared_ptr<Socket> GetSocket() override;
 
+    virtual int Close() override;
+
 private:
     int onAcceptMessage();
 

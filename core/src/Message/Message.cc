@@ -9,6 +9,7 @@ Message::Message() {
     source = 0;
     sz = 0;
     type = 0;
+    is_free = true;
 }
 
 Message::Message(int size) {
@@ -18,6 +19,7 @@ Message::Message(int size) {
     source = 0;
     sz = size;
     type = 0;
+    is_free = true;
 }
 
 Message::Message(const Message& msg) {
@@ -27,6 +29,7 @@ Message::Message(const Message& msg) {
     source = msg.source;
     sz = msg.sz;
     type = msg.type;
+    is_free = true;
 }
 
 void Message::operator=(const Message& msg) {
@@ -36,10 +39,11 @@ void Message::operator=(const Message& msg) {
     source = msg.source;
     sz = msg.sz;
     type = msg.type;
+    is_free = true;
 }
 
 Message::~Message() {
-    if (data) {
+    if (data && is_free) {
         free(data);
         data = nullptr;
     }

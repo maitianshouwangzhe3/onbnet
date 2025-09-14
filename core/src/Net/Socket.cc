@@ -77,11 +77,11 @@ int Socket::Recv() {
         if (nready == 0) {
             return 0;
         } else if (nready < 0) {
-        if (errno == EINTR)
-            continue;
-        if (errno == EWOULDBLOCK) {
-            break;
-        }
+            if (errno == EINTR)
+                continue;
+            if (errno == EWOULDBLOCK) {
+                break;
+            }
         } else {
             rBuffer->BufferAdd(buffer, nready);
             ret += nready;
@@ -107,15 +107,24 @@ int Socket::Send() {
     do {
         char buffer[4096] = {0};
         int len = wBuffer->BufferRemove(buffer, 4096);
+        int size = 0;
         if (len == 4096) {
-            ret += send(mFd, buffer, len, 0);
+            size = send(mFd, buffer, len, 0);
         } else if (len < 4096 && len > 0) {
-            ret += send(mFd, buffer, len, 0);
+            size = send(mFd, buffer, len, 0);
             break;
         } else {
             break;
         }
 
+        if (size < 0) {
+            if (errno == EINTR)
+                continue;
+            if (errno == EWOULDBLOCK) {
+                break;
+            }
+        }
+        ret += size;
     } while (true);
     return ret;
 }

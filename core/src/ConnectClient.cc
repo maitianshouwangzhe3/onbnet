@@ -4,6 +4,7 @@
 #include "ConnectClient.h"
 #include "Message.h"
 #include "NetWorkerManager.h"
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -40,8 +41,9 @@ int ConnectClient::EventReadHander() {
         data->buffer = nullptr;
         data->id = socket->GetFd();
         data->type = static_cast<int>(MessageType::DATA);
-        msg->data = static_cast<void*>(data);
+        // msg->data = static_cast<void*>(data);
         msg->session = S->ServiceId;
+        msg->source = S->ServiceId;
         ServiceManagerInst->Send(msg);
     }
 
@@ -49,6 +51,9 @@ int ConnectClient::EventReadHander() {
 }
 
 int ConnectClient::EventWriteHander() {
+    int fd = socket->GetFd();
+    (void)socket->Send();
+    NetWorkerManagerInst->eventModRead(fd);
     return 0;
 }
 
@@ -57,35 +62,35 @@ int ConnectClient::EventRDHUPHander() {
 }
 
 int ConnectClient::EventCloseHander() {
-    NetWorkerManagerInst->DeleteConnect(socket->GetFd());
-    auto S = NetWorkerManagerInst->GetService(socket->GetFd());
+    int fd = socket->GetFd();
+    NetWorkerManagerInst->DeleteConnect(fd);
+    auto S = NetWorkerManagerInst->GetService(fd);
     if (S) {
         std::shared_ptr<Message> msg = std::make_shared<Message>(sizeof(onbnet_socket_message));
         msg->type = static_cast<int>(MessageType::SOCKET);
         onbnet_socket_message* data = static_cast<onbnet_socket_message*>(msg->data);
         data->buffer = nullptr;
-        data->id = socket->GetFd();
+        data->id = fd;
         data->type = static_cast<int>(MessageType::DISCONNECT);
-        msg->data = static_cast<void*>(data);
+        // msg->data = static_cast<void*>(data);
         msg->session = S->ServiceId;
+        msg->source = S->ServiceId;
         ServiceManagerInst->Send(msg);
     }
     return 0;
 }
 
 int ConnectClient::OnMessage(Event& event) {
-    switch (event.event) {
-        case EventType::EVENT_READ: {
-            return EventReadHander();
+    if (event.event & static_cast<uint32_t>(EventType::EVENT_RDHUP)) {
+        return EventRDHUPHander();
+    } else {
+        if (event.event & static_cast<uint32_t>(EventType::EVENT_READ)) {
+            (void)EventReadHander();
         }
-        case EventType::EVENT_WRITE: {
-            return EventWriteHander();
-        }
-        case EventType::EVENT_RDHUP: {
-            return EventRDHUPHander();
-        }
-        default: {
-            
+
+        if (event.event & static_cast<uint32_t>(EventType::EVENT_WRITE)) {
+            std::cout << "write" << std::endl;
+            (void)EventWriteHander();
         }
     }
 
@@ -106,4 +111,8 @@ int ConnectClient::SendData(char* data, int len) {
 
 std::shared_ptr<Socket> ConnectClient::GetSocket() {
     return socket;
+}
+
+int ConnectClient::Close() {
+    return EventCloseHander();
 }

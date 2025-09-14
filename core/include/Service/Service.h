@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <string>
 #include <memory>
+#include <sys/types.h>
 
 
 #include "ProducerConsumerQueue.h"
@@ -30,6 +31,8 @@ public:
 
     void PushMessage(std::shared_ptr<Message> msg);
 
+    uint64_t GetSession();
+
     // DECLARE_LUA_CLASS(Service);
 
     OnbnetOnLua* LuaState;
@@ -38,6 +41,7 @@ public:
     std::string luaPath;
     std::string cPath;
     std::string servicePath;
+    uint64_t session;
 
     ProducerConsumerQueue<std::shared_ptr<Message>> gqueue;
 };

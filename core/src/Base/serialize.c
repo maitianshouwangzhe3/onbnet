@@ -634,7 +634,7 @@ lunpack(lua_State *L) {
 			luaL_checkstack(L,LUA_MINSTACK,NULL);
 		}
 		uint8_t type = 0;
-		uint8_t *t = rb_read(&rb, &type, 1);
+		uint8_t *t = rb_read(&rb, &type, sizeof(type));
 		if (t==NULL)
 			break;
 		push_value(L, &rb, *t & 0x7, *t>>3);

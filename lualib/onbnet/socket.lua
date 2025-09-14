@@ -71,16 +71,28 @@ function M.send(fd, msg, len)
     return socket.send(fd, msg, len)
 end
 
-function M.start(fd, func, block)
+function M.async_send(fd, msg, len)
+    return socket.async_send(fd, msg, len)
+end
+
+function M.start(fd, func, block, close_callback)
     assert(socket_pool[fd])
     local s = socket_pool[fd]
     s.callback = func
+    if close_callback then
+        s.on_disconnect = close_callback
+    end
 
     if block then
         socket.start(fd, block)
     else
         socket.start(fd, 0)
     end
+end
+
+function M.close_callback(fd, func)
+    local s = assert(socket_pool[fd])
+    s.on_disconnect = func
 end
 
 return M

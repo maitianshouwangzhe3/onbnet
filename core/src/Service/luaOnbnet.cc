@@ -4,6 +4,7 @@
 #include "Message.h"
 #include "NetWorkerManager.h"
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 extern "C" {
 #include "lua.h"
@@ -36,9 +37,23 @@ static int lsend(lua_State *L) {
     auto serviceId = luaL_checkinteger(L, 1);
     auto type = luaL_checkinteger(L, 2);
     size_t len = 0;
-    auto source = luaL_checkinteger(L, 3);
+    auto session = 0;
+
+    if (lua_isnil(L, 3)) {
+		session = 0;
+	} else {
+		session = luaL_checkinteger(L, 3);
+        if (session == 0) {
+            auto s = GetService(L);
+            if (s) {
+                session = s->GetSession();
+            }
+        }
+	}
+
     int mtype = lua_type(L,4);
     void* data = nullptr;
+    bool is_free = true;
     switch (mtype) {
 	case LUA_TSTRING: {
 		data = (void*)lua_tolstring(L, 4, &len);
@@ -49,18 +64,34 @@ static int lsend(lua_State *L) {
 	}
 	case LUA_TLIGHTUSERDATA: {
         data = lua_touserdata(L,4);
+        is_free = false;
 		break;
 	}
 	default:
 		luaL_error(L, "invalid param %s", lua_typename(L, lua_type(L,4)));
 	}
-    
-    std::shared_ptr<Message> msg = std::make_shared<Message>(len);
-    msg->data = data;
+
+    std::shared_ptr<Message> msg = nullptr;
+    if (is_free) {
+        msg = std::make_shared<Message>(len);
+        memcpy(msg->data, data, len);
+    } else {
+        msg = std::make_shared<Message>();
+        msg->data = data;
+    }
+
+    msg->is_free = is_free;
     msg->type = static_cast<int>(type);
-    msg->session = serviceId;
-    msg->source = source;
-    return ServiceManagerInst->Send(msg);
+    msg->session = session;
+    msg->source = GetService(L)->ServiceId;
+
+    if (ServiceManagerInst->Send(serviceId, msg)) {
+        lua_pushinteger(L, session);
+    } else {
+        lua_pushinteger(L, -1);
+    }
+
+    return 1;
 }
 
 static int lcallback(lua_State *L) {
@@ -92,11 +123,22 @@ static int lsocket_send(lua_State *L) {
     return 1;
 }
 
+static int lsocket_async_send(lua_State *L) { 
+    int fd = luaL_checkinteger(L, 1);
+    const char* data = luaL_checkstring(L, 2);
+    int len = luaL_checkinteger(L, 3);
+    auto c = NetWorkerManagerInst->GetConnect(fd);
+    auto socket = c->GetSocket();
+    socket->Push((void*)data, len);
+    NetWorkerManagerInst->eventModReadWrite(fd);
+    return 0;
+}
+
 static int lsocket_recv(lua_State *L) {
     int fd = luaL_checkinteger(L, 1);
     auto c = NetWorkerManagerInst->GetConnect(fd);
     auto socket = c->GetSocket();
-    socket->Recv();
+    // socket->Recv();
     int len = socket->RBufferLen();
     char* data = (char*)malloc(len);
     socket->Put(static_cast<void*>(data), len);
@@ -168,6 +210,7 @@ LUAMOD_API int luaopen_onbnet_socketdriver(lua_State *L) {
 	luaL_Reg l[] = {
         {"listen", llisten},
         {"send", lsocket_send},
+        {"async_send", lsocket_async_send},
         {"recv", lsocket_recv},
         {"start", lsocket_start},
         {"unpack", luaseri_socket_unpack},

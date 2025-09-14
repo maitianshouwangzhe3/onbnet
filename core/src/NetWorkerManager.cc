@@ -38,12 +38,23 @@ int NetWorkerManager::AddConnect(std::shared_ptr<Connect> connect, bool isEt) {
 }
 
 int NetWorkerManager::eventRead(int fd, bool isEt) {
-    return mPoller->AddEventRead(fd, nullptr, isEt);
+    return mPoller->AddEventRead(fd, isEt);
+}
+
+int NetWorkerManager::eventModReadWrite(int fd, bool isEt) {
+    return mPoller->ModEventReadWrite(fd, isEt);
+}
+
+int NetWorkerManager::eventModRead(int fd, bool isEt) {
+    return mPoller->ModEventRead(fd, isEt);
 }
 
 int NetWorkerManager::DeleteConnect(int fd) {
     mPoller->DelEvent(fd);
     mConnects[fd].reset();
+    if (mService.find(fd) != mService.end()) {
+        mService.erase(fd);
+    }
     return 0;
 }
 

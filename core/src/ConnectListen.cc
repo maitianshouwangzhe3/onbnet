@@ -15,15 +15,10 @@ ConnectListen::~ConnectListen() {
 }
 
 int ConnectListen::OnMessage(Event& event) {
-    switch (event.event) {
-        case EventType::EVENT_READ: {
-            return onAcceptMessage();
-        }
-        default: {
-
-        }
+    if (event.event & static_cast<uint32_t>(EventType::EVENT_READ)) {
+        return onAcceptMessage();
     }
-    return 0;
+    return -1;
 }
 
 int ConnectListen::onAcceptMessage() {
@@ -42,10 +37,9 @@ int ConnectListen::onAcceptMessage() {
                 data->id = socket->GetFd();
                 data->ud = fd;
                 data->type = static_cast<int>(MessageType::CONNECT);
-                msg->data = static_cast<void*>(data);
-                msg->session = S->ServiceId;
-                msg->source = 0;
-                std::cout << "connect" << std::endl;
+                // msg->data = static_cast<void*>(data);
+                msg->session = 0;
+                msg->source = S->ServiceId;
                 ServiceManagerInst->Send(msg);
             }
         } else {
@@ -57,4 +51,9 @@ int ConnectListen::onAcceptMessage() {
 
 std::shared_ptr<Socket> ConnectListen::GetSocket() {
     return socket;
+}
+
+int ConnectListen::Close() {
+    int fd = socket->GetFd();
+    return NetWorkerManagerInst->DeleteConnect(fd);
 }
