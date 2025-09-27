@@ -7,18 +7,16 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
-
-// LUA_EXPORT_CLASS_BEGIN(ConnectClient)
-// LUA_EXPORT_METHOD(RecvData)
-// LUA_EXPORT_METHOD(SendData)
-// LUA_EXPORT_CLASS_END()
 
 ConnectClient::ConnectClient() {
 
 }
 ConnectClient::ConnectClient(int fd) {
     socket = std::make_shared<Socket>(fd);
+}
+
+ConnectClient::ConnectClient(std::shared_ptr<Socket> socket) {
+    this->socket = socket;
 }
 
 ConnectClient::~ConnectClient() {
@@ -89,7 +87,6 @@ int ConnectClient::OnMessage(Event& event) {
         }
 
         if (event.event & static_cast<uint32_t>(EventType::EVENT_WRITE)) {
-            std::cout << "write" << std::endl;
             (void)EventWriteHander();
         }
     }

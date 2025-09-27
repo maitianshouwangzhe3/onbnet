@@ -4,6 +4,7 @@
 #include "ConnectClient.h"
 #include "NetWorkerManager.h"
 #include "ServiceManager.h"
+#include "logger.h"
 #include <iostream>
 #include <memory>
 ConnectListen::ConnectListen(protocol protocol) {
@@ -43,7 +44,7 @@ int ConnectListen::onAcceptMessage() {
                 ServiceManagerInst->Send(msg);
             }
         } else {
-            std::cout << "accept error" << std::endl;
+            log_error("accept error");
         }
     }
     return 0;

@@ -46,6 +46,10 @@ public:
 
     virtual int CreateSocket();
 
+    virtual int Connect(const char* ip, int port);
+
+    virtual int noDelay();
+
     virtual std::shared_ptr<onbnet::ChainBuffer> GetRBuffer();
 
     virtual std::shared_ptr<onbnet::ChainBuffer> GetWBuffer();

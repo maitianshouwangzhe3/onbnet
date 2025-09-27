@@ -95,4 +95,21 @@ function M.close_callback(fd, func)
     s.on_disconnect = func
 end
 
+function M.disconnected(id)
+	local s = socket_pool[id]
+	if s then
+		return not(s.connected or s.connecting)
+	end
+end
+
+function M.open(host, port)
+    return socket.connect(host, port)
+end
+
+function M.warning(id, callback)
+	local obj = socket_pool[id]
+	assert(obj)
+	obj.on_warning = callback
+end
+
 return M

@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 
 Socket::Socket() {
     Init(protocol::TCP);
@@ -149,6 +150,21 @@ int Socket::SetSocket(int fd) {
 int Socket::CreateSocket() {
     Init(mProto);
     return mFd;
+}
+
+int Socket::Connect(const char* ip, int port) {
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    inet_pton(AF_INET, ip, &addr.sin_addr);
+    socklen_t len = sizeof(addr);
+    return connect(mFd, (const struct sockaddr*)&addr, len);
+}
+
+int Socket::noDelay() {
+    int value = 1;
+    return setsockopt(mFd, IPPROTO_TCP, TCP_NODELAY, &value, sizeof(value));
 }
 
 void Socket::Init(protocol proto) {

@@ -7,6 +7,7 @@ class ConnectClient final: public Connect {
 public:
     ConnectClient();
     ConnectClient(int fd);
+    ConnectClient(std::shared_ptr<Socket> socket);
     ~ConnectClient();
 
     virtual int OnMessage(Event& event) override;

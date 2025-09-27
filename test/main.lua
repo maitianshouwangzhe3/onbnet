@@ -2,32 +2,39 @@
 
 local onbnet = require "onbnet"
 local socket = require "onbnet.socket"
-
+local logger = require "onbnet.logger"
 local test
 
 local function on_message(fd)
-    print("on_message fd " .. fd)
+    logger.console_info("on_message fd %d", fd)
     local data, len = socket.recv(fd)
     if data == "test_call\r\n" then
-        print("call")
+        logger.console_info("call")
         local succ, ret = onbnet.call(test, "lua", "call_test", "hello")
-        
-        print("session = " .. tostring(succ) .. " ret = " .. tostring(ret))
+        -- logger.console_info("call succ = %d, ret = %s", succ, ret)
+        print(string.format("call succ = %s, ret = %s", succ, ret))
     elseif data == "test_send\r\n" then
-        print("send")
-        local session, ret = onbnet.send(test, "lua", "send_test", "hello")
-        print("session = " .. tostring(session) .. " ret = " .. tostring(ret))
+        logger.console_info("send")
+        local succ, ret = onbnet.send(test, "lua", "send_test", "hello")
+        logger.console_info("call succ = %s, ret = %s", succ, ret)
     end
-    print("recv = " .. tostring(data) .. " len = " .. tostring(len))
+    logger.console_info("sleep 10 start")
+
+    onbnet.sleep(10)
+
+    logger.console_info("sleep 10 end")
+
+
+    -- logger.console_info("recv = %s, ret = %d", tostring(data), len)
     socket.async_send(fd, data, len)
 end
 
 local function on_close(fd)
-    print("close " .. fd)
+    logger.console_info("close %d", fd)
 end
 
 local function on_accept(fd, newfd)
-    print("accept " .. newfd)
+    logger.console_info("accept %d", newfd)
     socket.start(newfd, on_message, 1, on_close)
 end
 

@@ -1,7 +1,7 @@
 
 local cpp_onbnet = require "onbnet.core"
 local seri = require "onbnet.seri"
-
+local logger = require "onbnet.logger"
 local proto = {}
 local onbnet = {
     PTYPE_TEXT = 0,
@@ -18,7 +18,7 @@ local onbnet = {
 	PTYPE_SNAX = 11,
 }
 
-
+local unresponse = {}
 local error_queue = {}
 local wakeup_queue = {}
 local sleep_session = {}
@@ -117,20 +117,20 @@ local function suspend(co, result, command)
 		if session then
 			session_coroutine_id[co] = nil
 		end
-		print("close co", co)
+		logger.console_info("close co %d", co)
 		coroutine.close(co)
 	end
 
 	if command == "SUSPEND" then
 		return dispatch_wakeup()
 	elseif command == "QUIT" then
-		print("quit")
+		logger.console_info("quit")
 		return
 	elseif command == nil then
-		print("command nil")
+		logger.console_info("command nil")
 		return
 	else
-		print("error suspend command")
+		logger.console_info("error suspend command")
 	end
 end
 
@@ -142,6 +142,7 @@ local function yield_call(service, session)
 	if not succ then
 		return false, "call faild"
 	end
+
 	return true, msg
 end
 
@@ -212,12 +213,12 @@ end
 function onbnet.ret(msg)
     local co_session = session_coroutine_id[running_thread]
 	if co_session == nil then
-		print("No session")
+		logger.console_info("No session")
 	end
 
 	session_coroutine_id[running_thread] = nil
 	if co_session == 0 then
-		print("session 0")
+		logger.console_info("session 0")
 		return false
 	end
 
@@ -227,6 +228,91 @@ end
 
 function onbnet.retpack(...)
 	return onbnet.ret(onbnet.pack(...))
+end
+
+function onbnet.self()
+	return cpp_onbnet.self()
+end
+
+function onbnet.response(pack)
+	pack = pack or onbnet.pack
+
+	local co_session = assert(session_coroutine_id[running_thread], "no session")
+	session_coroutine_id[running_thread] = nil
+	local co_address = session_coroutine_address[running_thread]
+	if co_session == 0 then
+		return function() end
+	end
+	local function response(ok, ...)
+		if ok == "TEST" then
+			return unresponse[response] ~= nil
+		end
+		if not pack then
+			error "Can't response more than once"
+		end
+
+		local ret
+		if unresponse[response] then
+			if ok then
+				ret = onbnet.send(co_address, onbnet.PTYPE_RESPONSE, co_session, pack(...))
+				if ret == false then
+					-- If the package is too large, returns false. so we should report error back
+					onbnet.send(co_address, onbnet.PTYPE_ERROR, co_session, "")
+				end
+			else
+				ret = onbnet.send(co_address, onbnet.PTYPE_ERROR, co_session, "")
+			end
+			unresponse[response] = nil
+			ret = ret ~= nil
+		else
+			ret = false
+		end
+		pack = nil
+		return ret
+	end
+	unresponse[response] = co_address
+
+	return response
+end
+
+function onbnet.wakeup(token)
+	if sleep_session[token] then
+		table.insert(wakeup_queue, token)
+		return true
+	end
+end
+
+local function suspend_sleep(session, token)
+	session_id_coroutine[session] = running_thread
+	assert(sleep_session[token] == nil, "token duplicative")
+	sleep_session[token] = session
+
+	return coroutine.yield "SUSPEND"
+end
+
+function onbnet.sleep(timeout, token)
+	token = token or coroutine.running()
+	local session = cpp_onbnet.sleep(timeout)
+	assert(session > 0, "sleep failed")
+	local succ, ret = suspend_sleep(session, token)
+	sleep_session[token] = nil
+	if succ then
+		return
+	end
+
+	if ret == "BREAK" then
+		return "BREAK"
+	else
+		error "sleep error"
+	end
+end
+
+function onbnet.wait(token)
+	local session = cpp_onbnet.new_session()
+	token = token or coroutine.running()
+	suspend_sleep(session, token)
+	sleep_session[token] = nil
+	session_id_coroutine[session] = nil
 end
 
 return onbnet

@@ -12,7 +12,7 @@ Service::Service(std::string fileName): FileName(fileName), session(10) {
 }
 
 Service::~Service() {
-    std::cout << "Service::~Service" << std::endl;
+    
 }
 
 void Service::Init() {

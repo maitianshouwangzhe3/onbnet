@@ -16,3 +16,6 @@
 [submodule "3rd/lua-serialize"]
 	path = 3rd/lua-serialize
 	url = https://github.com/cloudwu/lua-serialize.git
+[submodule "3rd/spdlog"]
+	path = 3rd/spdlog
+	url = https://github.com/gabime/spdlog.git

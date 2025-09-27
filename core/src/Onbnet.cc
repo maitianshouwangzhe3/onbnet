@@ -1,6 +1,8 @@
 
+#include "Timer.h"
 #include "util.h"
 #include "Onbnet.h"
+#include "logger.h"
 #include "SocketWorker.h"
 #include "MessageWorker.h"
 #include "ServiceManager.h"
@@ -23,7 +25,9 @@ onbnetServer::onbnetServer(std::shared_ptr<CConfigFileReader> config) {
 }
 
 onbnetServer::~onbnetServer() {
-
+    if (LOGGER) {
+        delete LOGGER;
+    }
 }
 
 bool onbnetServer::Init() {
@@ -55,6 +59,8 @@ bool onbnetServer::Init() {
         }));
     }
 
+    new Timer(TimeType::TIMEWHEEL);
+    TimerInst->Start();
     return true;
 }
 
@@ -67,19 +73,22 @@ int onbnetServer::Start() {
         std::string boot = mConfig->GetConfigName("bootstrap");
         sm->newService(boot.c_str());
     } else {
-        std::cout << "no bootstrap" << std::endl;
+        throw std::runtime_error("no bootstrap");
     }
-    // std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 
     for (int i = 0; i < workerThreads.size(); ++i) {
         workerThreads[i]->join();
     }
+
     return 0;
 }
 
 void onbnetServer::Stop() {
-    std::cout << "onbnetServer stop" << std::endl;
+    log_info("onbnetServer workers stop");
     for (int i = 0; i < workers.size(); ++i) {
         workers[i]->stop();
     }
+
+    log_info("onbnetServer Timer stop");
+    TimerInst->stop();
 }

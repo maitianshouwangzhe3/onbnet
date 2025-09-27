@@ -4,6 +4,7 @@
 #include <vector>
 #include <thread>
 
+#include "Timer.h"
 #include "baseWorker.h"
 #include "NoCopyAble.h"
 #include "ProducerConsumerQueue.h"
@@ -26,12 +27,11 @@ public:
 
     void Stop();
 
-    
 
 private:
     std::shared_ptr<CConfigFileReader> mConfig;
+
     std::vector<onbnet::baseWorker*> workers;
     std::vector<std::unique_ptr<std::thread>> workerThreads;
-
     ProducerConsumerQueue<Service*> gqueue;
 };

@@ -1,5 +1,6 @@
 
 #include "Service.h"
+#include "logger.h"
 #include "luna.h"
 #include <iostream>
 #include <stdexcept>
@@ -23,7 +24,6 @@ ServiceManager::ServiceManager() {
 
 ServiceManager::~ServiceManager() {
 
-    std::cout << "ServiceManager::~ServiceManager()" << std::endl;
 }
 
 void ServiceManager::Init(CConfigFileReader* config) {
@@ -34,26 +34,26 @@ void ServiceManager::Init(CConfigFileReader* config) {
     if (tmp) {
         luaPath = tmp;
     } else {
-        std::cout << "lua_path not found" << std::endl;
+        throw std::runtime_error("lua_path not found");
     }
     
     tmp = config->GetConfigName("lua_cpath");
     if (tmp) {
         cPath = tmp;
     } else {
-        std::cout << "lua_cpath not found" << std::endl;
+        throw std::runtime_error("lua_cpath not found");
     }
 
     tmp = config->GetConfigName("lua_service");
     if (tmp) {
         servicePath = tmp;
     } else {
-        std::cout << "lua_service not found" << std::endl;
+        throw std::runtime_error("lua_service not found");
     }
 }
 
 void ServiceManager::__gc() {
-    std::cout << "ServiceManager::__gc()" << std::endl;
+    
 }
 
 void ServiceManager::Update() {
@@ -92,7 +92,7 @@ int ServiceManager::newService(const char* serviceName) {
     service->servicePath = servicePath;
     service->Init();
     mServiceVector[service->ServiceId] = service;
-    std::cout << "new service " << serviceName << " " << service->ServiceId << std::endl;
+    log_info("new service {} [{}]", serviceName, service->ServiceId);
     return service->ServiceId;
 }
 
