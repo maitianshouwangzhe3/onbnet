@@ -27,7 +27,7 @@ local session_coroutine_id = {}
 local session_id_coroutine = {}
 local session_coroutine_address = {}
 local running_thread
-
+local fork_queue = { h = 1, t = 0 }
 
 function onbnet.register_protocol(class)
 	local name = class.name
@@ -83,32 +83,33 @@ local function co_create(func)
 	return co
 end
 
-local suspend
+local suspendfunc
 
 local function dispatch_error_queue()
-	local session = table.remove(error_queue,1)
-	if session then
-		local co = session_id_coroutine[session]
-		session_id_coroutine[session] = nil
-		return suspend(co, coroutine_resume(co, false, nil, nil, session))
-	end
+	-- local session = table.remove(error_queue,1)
+	-- if session then
+	-- 	local co = session_id_coroutine[session]
+	-- 	session_id_coroutine[session] = nil
+	-- 	return suspendfunc(co, coroutine_resume(co, false, nil, nil, session))
+	-- end
 end
 
 local function dispatch_wakeup()
 	while true do
-		local token = table.remove(wakeup_queue,1)
+		local token = table.remove(wakeup_queue, 1)
 		if token then
 			local session = sleep_session[token]
 			if session then
 				local co = session_id_coroutine[session]
 				session_id_coroutine[session] = "BREAK"
-				return suspend(co, coroutine_resume(co, false, "BREAK", nil, session))
+				return suspendfunc(co, coroutine_resume(co, false, "BREAK", nil, session))
 			end
 		else
 			break
 		end
 	end
-	return dispatch_error_queue()
+	-- return dispatch_error_queue()
+	return 
 end
 
 local function suspend(co, result, command)
@@ -117,7 +118,7 @@ local function suspend(co, result, command)
 		if session then
 			session_coroutine_id[co] = nil
 		end
-		logger.console_info("close co %d", co)
+
 		coroutine.close(co)
 	end
 
@@ -134,10 +135,11 @@ local function suspend(co, result, command)
 	end
 end
 
+suspendfunc = suspend
 local function yield_call(service, session)
 	watching_session[session] = service
 	session_id_coroutine[session] = running_thread
-	local succ, msg = coroutine.yield "SUSPEND"
+	local succ, msg = coroutine.yield("SUSPEND")
 	watching_session[session] = nil
 	if not succ then
 		return false, "call faild"
@@ -151,9 +153,14 @@ onbnet.service_manager = cpp_onbnet.get_obj_from_cpp()
 local function raw_dispatch_message(prototype, msg, sz, session, source)
 	if prototype == onbnet.PTYPE_RESPONSE then
 		local co = session_id_coroutine[session]
-		if co then
+		if co == "BREAK" then
 			session_id_coroutine[session] = nil
-			suspend(co, coroutine_resume(co, true, msg, sz, session, source))
+		elseif co == nil then
+			-- unknown_response(session, source, msg, sz)
+			print("unknown response")
+		else
+			session_id_coroutine[session] = nil
+			suspend(co, coroutine_resume(co, true, msg, sz, session))
 		end
 	else
 		local p = proto[prototype]
@@ -165,12 +172,37 @@ local function raw_dispatch_message(prototype, msg, sz, session, source)
 				session_coroutine_address[co] = source
 				return suspend(co, coroutine_resume(co, session, source, p.unpack(msg, sz)))
 			end
+		else
+			print("unknown message type")
 		end
 	end
 end
 
 function onbnet.dispatch_message(...)
 	local succ, err = pcall(raw_dispatch_message,...)
+	while true do
+		if fork_queue.h > fork_queue.t then
+			-- queue is empty
+			fork_queue.h = 1
+			fork_queue.t = 0
+			break
+		end
+		-- pop queue
+		local h = fork_queue.h
+		local co = fork_queue[h]
+		fork_queue[h] = nil
+		fork_queue.h = h + 1
+
+		local fork_succ, fork_err = pcall(suspend,co, coroutine_resume(co))
+		if not fork_succ then
+			if succ then
+				succ = false
+				err = tostring(fork_err)
+			else
+				err = tostring(err) .. "\n" .. tostring(fork_err)
+			end
+		end
+	end
 	assert(succ, tostring(err))
 end
 
@@ -185,9 +217,13 @@ function onbnet.dispatch(typename, func)
 	end
 end
 
+local init_thread
 function onbnet.start(start_func)
 	cpp_onbnet.callback(onbnet.dispatch_message, true)
-    start_func()
+	init_thread = onbnet.timeout(0, function()
+		onbnet.init_service(start_func)
+		init_thread = nil
+	end)
 end
 
 function onbnet.new_service(name)
@@ -286,8 +322,7 @@ local function suspend_sleep(session, token)
 	session_id_coroutine[session] = running_thread
 	assert(sleep_session[token] == nil, "token duplicative")
 	sleep_session[token] = session
-
-	return coroutine.yield "SUSPEND"
+	return coroutine.yield("SUSPEND")
 end
 
 function onbnet.sleep(timeout, token)
@@ -313,6 +348,46 @@ function onbnet.wait(token)
 	suspend_sleep(session, token)
 	sleep_session[token] = nil
 	session_id_coroutine[session] = nil
+end
+
+function onbnet.fork(func,...)
+	local n = select("#", ...)
+	local co
+	if n == 0 then
+		co = co_create(func)
+	else
+		local args = { ... }
+		co = co_create(function() func(table.unpack(args, 1, n)) end)
+	end
+	local t = fork_queue.t + 1
+	fork_queue.t = t
+	fork_queue[t] = co
+	return co
+end
+
+function onbnet.yield()
+	return onbnet.sleep(0)
+end
+
+function onbnet.timeout(ti, func)
+	local co = co_create(func)
+	local session = cpp_onbnet.sleep(ti)
+	assert(session > 0)
+	assert(session_id_coroutine[session] == nil)
+	session_id_coroutine[session] = co
+	return co	-- for debug
+end
+
+function onbnet.init_service(start)
+	local function main()
+		start()
+	end
+	local ok, err = xpcall(main,  debug.traceback)
+	if not ok then
+		print("service init error", err)
+	else
+		print("service init ok")
+	end
 end
 
 return onbnet

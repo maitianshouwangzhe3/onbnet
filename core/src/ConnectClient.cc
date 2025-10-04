@@ -42,7 +42,8 @@ int ConnectClient::EventReadHander() {
         // msg->data = static_cast<void*>(data);
         msg->session = S->ServiceId;
         msg->source = S->ServiceId;
-        ServiceManagerInst->Send(msg);
+        // ServiceManagerInst->Send(msg);
+        ServiceManagerInst->Send(S->ServiceId, msg);
     }
 
     return nready;

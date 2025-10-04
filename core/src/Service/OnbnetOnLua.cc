@@ -85,7 +85,6 @@ int OnbnetOnLua::operator()(std::shared_ptr<Message>& msg) {
 	lua_pushinteger(L, msg->source);
 
 	r = lua_pcall(L, 5, 0 , trace);
-
 	if (r == LUA_OK) {
 		return 0;
 	}

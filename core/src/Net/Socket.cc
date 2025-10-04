@@ -191,3 +191,7 @@ std::shared_ptr<onbnet::ChainBuffer> Socket::GetRBuffer() {
 std::shared_ptr<onbnet::ChainBuffer> Socket::GetWBuffer() {
     return wBuffer;
 }
+
+int Socket::CheckSepRBuffer(const char* sep, const int seplen) {
+    return rBuffer->BufferSearch(sep, seplen);
+}

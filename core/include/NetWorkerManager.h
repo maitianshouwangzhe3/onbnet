@@ -33,6 +33,8 @@ public:
 
     int eventRead(int fd, bool isEt = true);
 
+    int eventWrite(int fd, bool isEt = true);
+
     int eventModReadWrite(int fd, bool isEt = true);
 
     int eventModRead(int fd, bool isEt = true);

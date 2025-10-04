@@ -54,6 +54,8 @@ public:
 
     virtual std::shared_ptr<onbnet::ChainBuffer> GetWBuffer();
 
+    virtual int CheckSepRBuffer(const char* sep, const int seplen);
+
     // DECLARE_LUA_CLASS(Socket);
     void Init(protocol proto);
 private:

@@ -41,6 +41,10 @@ int NetWorkerManager::eventRead(int fd, bool isEt) {
     return mPoller->AddEventRead(fd, isEt);
 }
 
+int NetWorkerManager::eventWrite(int fd, bool isEt) {
+    return mPoller->AddEventWrite(fd, isEt);
+}
+
 int NetWorkerManager::eventModReadWrite(int fd, bool isEt) {
     return mPoller->ModEventReadWrite(fd, isEt);
 }

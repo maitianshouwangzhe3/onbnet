@@ -2,9 +2,12 @@
 
 #include "ConnectClient.h"
 #include "ConnectListen.h"
+#include "ConnectServer.h"
 #include "Message.h"
 #include "NetWorkerManager.h"
 #include "Socket.h"
+#include "timewheel.h"
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -12,6 +15,7 @@ extern "C" {
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
+#include "luasocket.h"
 }
 
 #include "luna.h"
@@ -27,6 +31,76 @@ extern "C" {
 #define REGISTER_LIBRARYS(name, lua_c_fn) \
     luaL_requiref(L, name, lua_c_fn, 0); \
     lua_pop(L, 1) /* remove lib */
+
+static size_t count_size(lua_State *L, int index) {
+	size_t tlen = 0;
+	int i;
+	for (i=1;lua_geti(L, index, i) != LUA_TNIL; ++i) {
+		size_t len;
+		luaL_checklstring(L, -1, &len);
+		tlen += len;
+		lua_pop(L,1);
+	}
+	lua_pop(L,1);
+	return tlen;
+}
+
+static void concat_table(lua_State *L, int index, void *buffer, size_t tlen) {
+	char* ptr = (char*)buffer;
+	int i = 0;
+	for (i=1;lua_geti(L, index, i) != LUA_TNIL; ++i) {
+		size_t len;
+		const char * str = lua_tolstring(L, -1, &len);
+		if (str == NULL || tlen < len) {
+			break;
+		}
+		memcpy(ptr, str, len);
+		ptr += len;
+		tlen -= len;
+		lua_pop(L,1);
+	}
+	if (tlen != 0) {
+		free(buffer);
+		luaL_error(L, "Invalid strings table");
+	}
+	lua_pop(L,1);
+}
+
+static void* get_buffer(lua_State* L, int index, size_t* sz) {
+	void* buffer = nullptr;
+	switch(lua_type(L, index)) {
+		size_t len;
+	case LUA_TUSERDATA:
+		// lua full useobject must be a raw pointer, it can't be a socket object or a memory object.
+		buffer = lua_touserdata(L, index);
+		if (lua_isinteger(L, index+1)) {
+			*sz = lua_tointeger(L, index+1);
+		} else {
+			*sz = lua_rawlen(L, index);
+		}
+		break;
+	case LUA_TLIGHTUSERDATA: {
+		if (lua_isinteger(L, index + 1)) {
+			*sz = (size_t)lua_tointeger(L,index+1);
+		}
+
+		buffer = lua_touserdata(L,index);
+		break;
+		}
+	case LUA_TTABLE:
+		// concat the table as a string
+		len = count_size(L, index);
+		buffer = malloc(len);
+		concat_table(L, index, buffer, len);
+		*sz = len;
+		break;
+	default:
+		buffer = (void*)luaL_checklstring(L, index, sz);
+		break;
+	}
+
+    return buffer;
+}
 
 static int get_obj_from_cpp(lua_State *L) {
     if (!ServiceManager::inst) {
@@ -117,8 +191,14 @@ static int llisten(lua_State *L) {
 
 static int lsocket_send(lua_State *L) {
     int fd = luaL_checkinteger(L, 1);
-    const char* data = luaL_checkstring(L, 2);
-    int len = luaL_checkinteger(L, 3);
+    void* data = nullptr;
+    int nargs = lua_gettop(L);
+    size_t len = 0;
+    if (nargs > 2) {
+        len = luaL_checkinteger(L, 3);
+    }
+
+    data = get_buffer(L, 2, &len);
     auto c = NetWorkerManagerInst->GetConnect(fd);
     auto socket = c->GetSocket();
     socket->Push((void*)data, len);
@@ -173,10 +253,14 @@ static int lsocket_connect(lua_State *L) {
     int ret = -1;
     if (host) {
         auto socketObj = std::make_shared<Socket>(protocol::TCP);
-        ret = socketObj->Connect(host, port);
+        auto s = GetService(L);
+        if (s) {
+            NetWorkerManagerInst->SetService(socketObj->GetFd(), s);
+        }
+        std::shared_ptr<ConnectServer> connect = std::make_shared<ConnectServer>(socketObj);
+        NetWorkerManagerInst->AddConnect(connect);
+        ret = connect->Connect(host, port);
         if (ret == 0) {
-            std::shared_ptr<Connect> connect = std::make_shared<ConnectClient>(socketObj);
-            NetWorkerManagerInst->AddConnect(connect);
             ret = socketObj->GetFd();
         }
     }
@@ -196,6 +280,42 @@ static int lsocket_nodelay(lua_State *L) {
 
     lua_pushinteger(L, ret);
     return 1;
+}
+
+static int lsocket_recvline(lua_State *L) {
+    int fd = luaL_checkinteger(L, 1);
+    auto c = NetWorkerManagerInst->GetConnect(fd);
+    if (c) {
+        auto socket = c->GetSocket();
+        if (socket && socket->RBufferLen() > 0) {
+            size_t seplen = 0;
+            const char* sep = luaL_checklstring(L,2,&seplen);
+            int datalen = socket->CheckSepRBuffer(sep, seplen);
+            if (datalen > 0) { 
+                char* data = (char*)malloc(datalen);
+                socket->Put(static_cast<void*>(data), datalen);
+                lua_pushlstring(L, data, datalen - seplen);
+            } else {
+                lua_pushboolean(L, false);
+            }
+        } else {
+            lua_pushboolean(L, false);
+        }
+    }
+    return 1;
+}
+
+static int lsocket_recvall(lua_State *L) {
+    int fd = luaL_checkinteger(L, 1);
+    auto c = NetWorkerManagerInst->GetConnect(fd);
+    auto socket = c->GetSocket();
+    int len = socket->RBufferLen();
+    char* data = (char*)malloc(len);
+    socket->Put(static_cast<void*>(data), len);
+    
+    lua_pushlstring(L, data, len);
+    lua_pushinteger(L, len);
+    return 2;
 }
 
 static int lnoBlock(lua_State *L) {
@@ -222,7 +342,6 @@ static int lsleep(lua_State *L) {
             std::shared_ptr<Message> msg = std::make_shared<Message>();
             msg->type = static_cast<int>(MessageType::RESPONSE);
             msg->session = session;
-            std::cout << "sleep callback" << std::endl;
             ServiceManagerInst->Send(serviceId, msg);
         });
     }
@@ -423,6 +542,8 @@ LUAMOD_API int luaopen_onbnet_socketdriver(lua_State *L) {
         {"unpack", luaseri_socket_unpack},
         {"connect", lsocket_connect},
         {"nodelay", lsocket_nodelay},
+        {"recvline", lsocket_recvline},
+        {"recvall", lsocket_recvall},
 		{ NULL, NULL },
 	};
 
@@ -466,6 +587,8 @@ void openOnbnetLibs(lua_State* L) {
     REGISTER_LIBRARYS("onbnet.socketdriver", luaopen_onbnet_socketdriver);
 
     REGISTER_LIBRARYS("onbnet.loggerdriver", luaopen_onbnet_loggerdriver);
+
+    REGISTER_LIBRARYS("socket.core", luaopen_socket_core);
 }
 
 

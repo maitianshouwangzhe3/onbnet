@@ -19,6 +19,7 @@ enum class MessageType {
     CONNECT,
     DATA,
     DISCONNECT,
+    SERVER_CONNECT,
 };
 
 struct onbnet_socket_message {

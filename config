@@ -1,11 +1,7 @@
-
-
-lua_path=/home/ouyangjun/code/github/onbnet/test/?.lua;/home/ouyangjun/code/github/onbnet/lualib/?.lua
-
-lua_cpath=/home/ouyangjun/code/github/onbnet/build/libclib/?.so
-
-lua_service=/home/ouyangjun/code/github/onbnet/service/?.lua
-
+root = "./"
+lua_path=./test/?.lua;./lualib/?.lua;./lualib/luasocket/?.lua
+lua_cpath=./build/libclib/?.so
+lua_service=./service/?.lua
 max_connect=1024
-threads=2
+threads=4
 bootstrap=main

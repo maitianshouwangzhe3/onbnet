@@ -3,6 +3,15 @@
 local onbnet = require "onbnet"
 local socket = require "onbnet.socket"
 local logger = require "onbnet.logger"
+local redis = require "onbnet.db.redis"
+-- local LuaPanda = require "LuaPanda"
+-- LuaPanda.start("127.0.0.1",8818)
+local conf = {
+	host = "127.0.0.1" ,
+	port = 6379,
+	db = 0
+}
+
 local test
 
 local function on_message(fd)
@@ -39,7 +48,13 @@ local function on_accept(fd, newfd)
 end
 
 onbnet.start(function()
-    test = onbnet.new_service("test_message")
-    local fd = socket.listen("", 8001)
-    socket.start(fd, on_accept)
+    -- test = onbnet.new_service("test_redis")
+    -- local fd = socket.listen("", 8001)
+    -- socket.start(fd, on_accept)
+
+    local db = redis.connect(conf)
+	print("start redis test")
+	local ret = db:set("A", "hello")
+    print("end redis test", ret)
+    db:disconnect()
 end)

@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # 设置默认构建类型为 Debug
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release")
+    set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
 # 设置 LuaJIT 路径
@@ -30,26 +30,33 @@ set(LUNA_DIR ${PROJECT_SOURCE_DIR}/3rd/luna)
 set(LUNA_INC ${LUNA_DIR})
 set(LUNA_LIBPATH ${LUNA_DIR})
 
+set(SPDLOG_DIR ${PROJECT_SOURCE_DIR}/3rd/spdlog)
+set(SPDLOG_INC ${SPDLOG_DIR}/include)
+
 set(ONBNET_INC ${PROJECT_SOURCE_DIR}/core/include)
 set(ONBNET_BASE_INC ${PROJECT_SOURCE_DIR}/core/include/Base)
 set(ONBNET_NET_INC ${PROJECT_SOURCE_DIR}/core/include/Net)
 set(ONBNET_UTIL_INC ${PROJECT_SOURCE_DIR}/core/include/Util)
+set(ONBNET_TIMER_INC ${PROJECT_SOURCE_DIR}/core/include/Timer)
 set(ONBNET_POLLER_INC ${PROJECT_SOURCE_DIR}/core/include/Poller)
 set(ONBNET_BUFFER_INC ${PROJECT_SOURCE_DIR}/core/include/Buffer)
 set(ONBNET_THREAD_INC ${PROJECT_SOURCE_DIR}/core/include/Worker)
 set(ONBNET_SERVICE_INC ${PROJECT_SOURCE_DIR}/core/include/Service)
 set(ONBNET_MESSAGE_INC ${PROJECT_SOURCE_DIR}/core/include/Message)
+set(ONBNET_LUASOCKET_INC ${PROJECT_SOURCE_DIR}/core/include/luasocket)
 
 # 核心源码路径
 aux_source_directory(${PROJECT_SOURCE_DIR}/core/src ONBNET_SRC_FILES)
 aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/Net ONBNET_SRC_NET_FILES)
 aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/Util ONBNET_SRC_UTIL_FILES)
 aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/Base ONBNET_SRC_BASE_FILES)
+aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/Timer ONBNET_SRC_TIMER_FILES)
 aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/Poller ONBNET_SRC_POLLER_FILES)
 aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/Buffer ONBNET_SRC_BUFFER_FILES)
 aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/Worker ONBNET_SRC_THREAD_FILES)
 aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/Service ONBNET_SRC_SERVICE_FILES)
 aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/Message ONBNET_SRC_MESSAGE_FILES)
+aux_source_directory(${PROJECT_SOURCE_DIR}/core/src/luasocket ONBNET_SRC_LUASOCKET_FILES)
 
 # 输出目录
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -142,11 +149,13 @@ set(ONBNET_SOURCES
     ${ONBNET_SRC_NET_FILES}
     ${ONBNET_SRC_UTIL_FILES}
     ${ONBNET_SRC_BASE_FILES}
+    ${ONBNET_SRC_TIMER_FILES}
     ${ONBNET_SRC_POLLER_FILES}
     ${ONBNET_SRC_BUFFER_FILES}
     ${ONBNET_SRC_THREAD_FILES}
     ${ONBNET_SRC_SERVICE_FILES}
     ${ONBNET_SRC_MESSAGE_FILES}
+    ${ONBNET_SRC_LUASOCKET_FILES}
 )
 
 # set(ONBNET_DY_SOURCES
@@ -164,8 +173,10 @@ set(ONBNET_INCLUDES
     ${LUA_INC}
     ${LUNA_INC}
     ${JEMALLOC_INC}
+    ${SPDLOG_INC}
     ${ONBNET_INC}
     ${ONBNET_UTIL_INC}
+    ${ONBNET_TIMER_INC}
     ${ONBNET_POLLER_INC}
     ${ONBNET_BASE_INC}
     ${ONBNET_NET_INC}
@@ -173,6 +184,7 @@ set(ONBNET_INCLUDES
     ${ONBNET_THREAD_INC}
     ${ONBNET_SERVICE_INC}
     ${ONBNET_MESSAGE_INC}
+    ${ONBNET_LUASOCKET_INC}
 )
 
 # 构建 luaclib/onlua.so
@@ -223,6 +235,7 @@ set(ONBNET_INCLUDES
 # set_target_properties(lua_onbnet PROPERTIES PREFIX "" OUTPUT_NAME "onbnetcore" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 # 构建 onbnet
+add_subdirectory(3rd/spdlog)
 add_executable(onbnet ${ONBNET_SOURCES})
 add_dependencies(onbnet lua_ext jemalloc_ext luna_ext)
 target_include_directories(onbnet PRIVATE ${ONBNET_INCLUDES})

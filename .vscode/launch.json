@@ -2,6 +2,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+			"type": "lua",
+			"request": "launch",
+			"tag": "normal",
+			"name": "LuaPanda",
+			"cwd": "${workspaceFolder}",
+			"luaFileExtension": "",
+			"connectionPort": 8818,
+			"stopOnEntry": true,
+			"useCHook": true,
+			"autoPathMode": true,
+		},
+        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",

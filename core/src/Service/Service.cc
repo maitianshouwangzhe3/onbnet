@@ -28,7 +28,15 @@ void Service::Init() {
 void Service::Start() {
     while (!gqueue.Empty()) {
         std::shared_ptr<Message> msg = gqueue.PopPtr();
-        (*LuaState)(msg);
+        if (msg) {
+            try {
+                (*LuaState)(msg);
+            } catch (...) {
+                
+            }
+        } else {
+            
+        }
     }
 }
 
