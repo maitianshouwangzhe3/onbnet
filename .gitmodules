@@ -1,18 +1,9 @@
 [submodule "3rd/jemalloc"]
 	path = 3rd/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
-[submodule "3rd/luajit2"]
-	path = 3rd/luajit2
-	url = https://github.com/openresty/luajit2.git
-[submodule "3rd/luna"]
-	path = 3rd/luna
-	url = https://github.com/trumanzhao/luna.git
 [submodule "3rd/lua"]
 	path = 3rd/lua
 	url = https://github.com/lua/lua.git
-[submodule "3rd/LuaJIT"]
-	path = 3rd/LuaJIT
-	url = https://github.com/LuaJIT/LuaJIT.git
 [submodule "3rd/lua-serialize"]
 	path = 3rd/lua-serialize
 	url = https://github.com/cloudwu/lua-serialize.git
