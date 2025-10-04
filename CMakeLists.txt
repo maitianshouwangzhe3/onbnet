@@ -89,16 +89,6 @@ ExternalProject_Add(jemalloc_ext
     BUILD_IN_SOURCE 1
 )
 
-# # 构建 LuaJIT
-# ExternalProject_Add(luajit2_ext
-#     PREFIX ${PROJECT_SOURCE_DIR}/3rd/luajit2
-#     SOURCE_DIR ${PROJECT_SOURCE_DIR}/3rd/luajit2
-#     CONFIGURE_COMMAND ""
-#     BUILD_COMMAND make -j1
-#     INSTALL_COMMAND ""
-#     BUILD_IN_SOURCE 1
-# ) 
-
 # 构建 Lua
 ExternalProject_Add(lua_ext
     PREFIX ${PROJECT_SOURCE_DIR}/3rd/lua
@@ -111,37 +101,17 @@ ExternalProject_Add(lua_ext
     BUILD_IN_SOURCE 1
 )
 
-# 构建 Luajit
-ExternalProject_Add(luajit_ext
-    PREFIX ${PROJECT_SOURCE_DIR}/3rd/LuaJIT
-    SOURCE_DIR ${PROJECT_SOURCE_DIR}/3rd/LuaJIT
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND make -j1
-    INSTALL_COMMAND ""
-    BUILD_IN_SOURCE 1
-)
-
 # 构建 Luna
 ExternalProject_Add(luna_ext
     PREFIX ${PROJECT_SOURCE_DIR}/3rd/luna
     SOURCE_DIR ${PROJECT_SOURCE_DIR}/3rd/luna
     PATCH_COMMAND ${CMAKE_COMMAND} -E echo "Adding -fPIC to CFLAGS"
-    COMMAND sed -i "s/CFLAGS =/CFLAGS= -fPIC/" makefile
+    COMMAND sed -i "s#CFLAGS =#CFLAGS= -fPIC -I ../lua -L ../lua#" makefile
     CONFIGURE_COMMAND ""
-    BUILD_COMMAND make -j1
+    BUILD_COMMAND make -j1 target_type=static_shared
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE 1
 )
-
-# 构建
-# ExternalProject_Add(lua-serialize
-#     PREFIX ${PROJECT_SOURCE_DIR}/3rd/lua-serialize
-#     SOURCE_DIR ${PROJECT_SOURCE_DIR}/3rd/lua-serialize
-#     CONFIGURE_COMMAND ""
-#     BUILD_COMMAND make linux
-#     INSTALL_COMMAND ""
-#     BUILD_IN_SOURCE 1
-# )
 
 # 主程序 onbnet
 set(ONBNET_SOURCES
@@ -157,16 +127,6 @@ set(ONBNET_SOURCES
     ${ONBNET_SRC_MESSAGE_FILES}
     ${ONBNET_SRC_LUASOCKET_FILES}
 )
-
-# set(ONBNET_DY_SOURCES
-#     ${ONBNET_SRC_SERVICE_FILES}
-#     ${ONBNET_SRC_MESSAGE_FILES}
-# )
-
-# set(ONBNET_DY_INCLUDES
-#     ${ONBNET_BASE_INC}
-#     ${ONBNET_SERVICE_INC}
-# )
 
 # 头文件目录
 set(ONBNET_INCLUDES
@@ -187,52 +147,6 @@ set(ONBNET_INCLUDES
     ${ONBNET_LUASOCKET_INC}
 )
 
-# 构建 luaclib/onlua.so
-# set(LUA_CLIB_ONLUA_SRC
-#     ${PROJECT_SOURCE_DIR}/core/src/Service/OnbnetOnLua.cc
-# )
-
-# set(LUA_CLIB_ONLUA_INC
-#     ${LUNA_INC}
-#     ${LUA_INC}
-#     ${JEMALLOC_INC}
-#     ${ONBNET_BASE_INC}
-#     ${ONBNET_SERVICE_INC}
-# )
-# #${LUA_LIBPATH}/liblua.a
-# add_library(onlua SHARED ${LUA_CLIB_ONLUA_SRC})
-# add_dependencies(onlua lua_ext luna_ext)
-# target_include_directories(onlua PRIVATE ${LUA_CLIB_ONLUA_INC})
-# target_link_libraries(onlua PRIVATE ${JEMALLOC_DIR}/lib/libjemalloc_pic.a ${LUA_LIBPATH}/liblua.a)
-# target_link_options(onlua PRIVATE ${SHARED_LIB_FLAGS})
-# set_target_properties(onlua PROPERTIES PREFIX "" OUTPUT_NAME "onlua" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-
-# 构建 luaclib/lua_onbnet.so
-# set(LUA_CLIB_ONBNET_SRC
-#     # ${ONBNET_SRC_SERVICE_FILES}
-#     ${ONBNET_SRC_UTIL_FILES}
-#     ${ONBNET_SRC_MESSAGE_FILES}
-#     ${PROJECT_SOURCE_DIR}/core/src/Service/Service.cc
-#     ${PROJECT_SOURCE_DIR}/core/src/Service/luaOnbnet.cc
-#     ${PROJECT_SOURCE_DIR}/core/src/Service/ServiceManager.cc
-# )
-
-# set(LUA_CLIB_ONBNET_INC
-#     ${LUA_INC}
-#     ${LUNA_INC}
-#     ${ONBNET_INC}
-#     ${ONBNET_BASE_INC}
-#     ${ONBNET_UTIL_INC}
-#     ${ONBNET_SERVICE_INC}
-#     ${ONBNET_MESSAGE_INC}
-# )
-
-# add_library(lua_onbnet SHARED ${LUA_CLIB_ONBNET_SRC})
-# add_dependencies(lua_onbnet lua_ext luna_ext)
-# target_include_directories(lua_onbnet PRIVATE ${LUA_CLIB_ONBNET_INC})
-# target_link_libraries(lua_onbnet PRIVATE ${LUA_LIBPATH}/liblua.a ${LUNA_LIBPATH}/libluna.a)
-# target_link_options(lua_onbnet PRIVATE ${SHARED_LIB_FLAGS})
-# set_target_properties(lua_onbnet PROPERTIES PREFIX "" OUTPUT_NAME "onbnetcore" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 # 构建 onbnet
 add_subdirectory(3rd/spdlog)
@@ -241,15 +155,6 @@ add_dependencies(onbnet lua_ext jemalloc_ext luna_ext)
 target_include_directories(onbnet PRIVATE ${ONBNET_INCLUDES})
 target_link_options(onbnet PRIVATE ${ONBNET_LIBS})
 target_link_libraries(onbnet PRIVATE ${JEMALLOC_DIR}/lib/libjemalloc_pic.a ${LUA_LIBPATH}/liblua.a ${LUNA_LIBPATH}/libluna.a)
-
-
-# 构建 luaclib/ltls.so (如果需要)
-# 注意：ltls 需要链接 OpenSSL，这里假设已安装
-# add_library(lua_ltls SHARED lualib-src/ltls.cc)
-# target_include_directories(lua_ltls PRIVATE ${LUA_INC})
-# target_link_libraries(lua_ltls PRIVATE ssl crypto)
-# target_link_options(lua_ltls PRIVATE ${SHARED_LIB_FLAGS})
-# set_target_properties(lua_ltls PROPERTIES PREFIX "" OUTPUT_NAME "ltls" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 # 安装目标（可选）
 install(TARGETS onbnet DESTINATION .)
