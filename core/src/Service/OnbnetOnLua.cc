@@ -5,6 +5,7 @@ extern "C" {
 	#include "jemalloc.h"
 }
 
+#include "logger.h"
 #include "Message.h"
 #include "luaOnbnet.h"
 #include "OnbnetOnLua.h"
@@ -89,6 +90,7 @@ int OnbnetOnLua::operator()(std::shared_ptr<Message>& msg) {
 		return 0;
 	}
 
+	log_error("xpcall: {}", lua_tostring(L, -1));
 	lua_pop(L,1);
 	return -1;
 }
@@ -125,15 +127,16 @@ int OnbnetOnLua::Init(void* ctx, std::string fileName) {
 	lua_pushlstring(L, fileName.c_str(), fileName.size());
 	r = lua_pcall(L,1,0,1);
 	if (r != LUA_OK) {
+		lua_pop(L, 1);
 		printf("error: %s\n", lua_tostring(L, -1));
 		return 1;
 	}
 
 	lua_settop(L,0);
-	if (lua_getfield(L, LUA_REGISTRYINDEX, "memlimit") == LUA_TNUMBER) {
+	// if (lua_getfield(L, LUA_REGISTRYINDEX, "memlimit") == LUA_TNUMBER) {
 
-	}
-	lua_pop(L, 1);
+	// }
+	// lua_pop(L, 1);
 
 	lua_gc(L, LUA_GCRESTART, 0);
 	return 0;

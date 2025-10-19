@@ -23,7 +23,7 @@ public:
 
     void Init();
 
-    void Start();
+    bool Start();
 
     void test();
 
@@ -42,6 +42,8 @@ public:
     std::string cPath;
     std::string servicePath;
     uint64_t session;
+
+    std::atomic<bool> Invoke;
 
     ProducerConsumerQueue<std::shared_ptr<Message>> gqueue;
 };

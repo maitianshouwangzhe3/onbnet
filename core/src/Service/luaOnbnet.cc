@@ -15,6 +15,7 @@ extern "C" {
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
+#include "lua-crypt.h"
 #include "luasocket.h"
 }
 
@@ -221,14 +222,33 @@ static int lsocket_async_send(lua_State *L) {
 static int lsocket_recv(lua_State *L) {
     int fd = luaL_checkinteger(L, 1);
     auto c = NetWorkerManagerInst->GetConnect(fd);
-    auto socket = c->GetSocket();
-    // socket->Recv();
-    int len = socket->RBufferLen();
-    char* data = (char*)malloc(len);
-    socket->Put(static_cast<void*>(data), len);
+    if (c) {
+        auto socket = c->GetSocket();
+        int len = 0;
+        if (lua_isnil(L, 2)) {
+            len = socket->RBufferLen();
+        } else {
+            if(lua_isinteger(L, 2)) {
+                len = luaL_checkinteger(L, 2);
+            } else {
+                len = socket->RBufferLen();
+            }
+        }
+
+        char* data = (char*)malloc(len);
+        int ret = socket->Put(static_cast<void*>(data), len);
+        if (ret > 0) {
+            lua_pushlstring(L, data, len);
+            lua_pushinteger(L, len);
+            return 2;
+        }
+        
+        lua_pushnil(L);
+        return 1;
+    }
     
-    lua_pushlstring(L, data, len);
-    lua_pushinteger(L, len);
+    lua_pushnil(L);
+    lua_pushinteger(L, 0);
     return 2;
 }
 
@@ -253,15 +273,17 @@ static int lsocket_connect(lua_State *L) {
     int ret = -1;
     if (host) {
         auto socketObj = std::make_shared<Socket>(protocol::TCP);
-        auto s = GetService(L);
-        if (s) {
-            NetWorkerManagerInst->SetService(socketObj->GetFd(), s);
-        }
-        std::shared_ptr<ConnectServer> connect = std::make_shared<ConnectServer>(socketObj);
-        NetWorkerManagerInst->AddConnect(connect);
-        ret = connect->Connect(host, port);
-        if (ret == 0) {
-            ret = socketObj->GetFd();
+        if (socketObj) {
+            auto s = GetService(L);
+            if (s) {
+                NetWorkerManagerInst->SetService(socketObj->GetFd(), s);
+                std::shared_ptr<ConnectServer> connect = std::make_shared<ConnectServer>(socketObj);
+                NetWorkerManagerInst->AddConnect(connect);
+                ret = connect->Connect(host, port);
+                if (ret == 0) {
+                    ret = socketObj->GetFd();
+                }
+            }
         }
     }
     
@@ -302,6 +324,42 @@ static int lsocket_recvline(lua_State *L) {
             lua_pushboolean(L, false);
         }
     }
+    return 1;
+}
+
+static int lsocket_checkline(lua_State *L) {
+    int fd = luaL_checkinteger(L, 1);
+    auto c = NetWorkerManagerInst->GetConnect(fd);
+    if (c) {
+        auto socket = c->GetSocket();
+        if (socket && socket->RBufferLen() > 0) {
+            size_t seplen = 0;
+            const char* sep = luaL_checklstring(L,2,&seplen);
+            int datalen = socket->CheckSepRBuffer(sep, seplen);
+            if (datalen > 0) { 
+                lua_pushboolean(L, true);
+                return 1;
+            }
+        }
+    }
+
+    lua_pushboolean(L, false);
+    return 1;
+}
+
+static int lsocket_checkbufferlen(lua_State *L) {
+    int fd = luaL_checkinteger(L, 1);
+    auto c = NetWorkerManagerInst->GetConnect(fd);
+    if (c) {
+        auto socket = c->GetSocket();
+        if (socket) {
+            int len = socket->RBufferLen();
+            lua_pushinteger(L, len);
+            return 1;
+        }
+    }
+
+    lua_pushboolean(L, 0);
     return 1;
 }
 
@@ -544,6 +602,8 @@ LUAMOD_API int luaopen_onbnet_socketdriver(lua_State *L) {
         {"nodelay", lsocket_nodelay},
         {"recvline", lsocket_recvline},
         {"recvall", lsocket_recvall},
+        {"checkline", lsocket_checkline},
+        {"checkbufferlen", lsocket_checkbufferlen},
 		{ NULL, NULL },
 	};
 
@@ -589,6 +649,8 @@ void openOnbnetLibs(lua_State* L) {
     REGISTER_LIBRARYS("onbnet.loggerdriver", luaopen_onbnet_loggerdriver);
 
     REGISTER_LIBRARYS("socket.core", luaopen_socket_core);
+
+    REGISTER_LIBRARYS("onbnet.crypt", luaopen_client_crypt);
 }
 
 

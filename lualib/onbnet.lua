@@ -66,7 +66,7 @@ local function co_create(func)
 			while true do
 				local session = session_coroutine_id[co]
 				if session and session ~= 0 then
-					print("error session ", session)
+					logger.log_error("error session %d", session)
 				end
 
 				func = nil
@@ -83,15 +83,15 @@ local function co_create(func)
 	return co
 end
 
-local suspendfunc
+local suspend
 
 local function dispatch_error_queue()
-	-- local session = table.remove(error_queue,1)
-	-- if session then
-	-- 	local co = session_id_coroutine[session]
-	-- 	session_id_coroutine[session] = nil
-	-- 	return suspendfunc(co, coroutine_resume(co, false, nil, nil, session))
-	-- end
+	local session = table.remove(error_queue, 1)
+	if session then
+		local co = session_id_coroutine[session]
+		session_id_coroutine[session] = nil
+		return suspend(co, coroutine_resume(co, false, nil, nil, session))
+	end
 end
 
 local function dispatch_wakeup()
@@ -102,17 +102,16 @@ local function dispatch_wakeup()
 			if session then
 				local co = session_id_coroutine[session]
 				session_id_coroutine[session] = "BREAK"
-				return suspendfunc(co, coroutine_resume(co, false, "BREAK", nil, session))
+				return suspend(co, coroutine_resume(co, false, "BREAK", nil, session))
 			end
 		else
 			break
 		end
 	end
-	-- return dispatch_error_queue()
-	return 
+	return dispatch_error_queue()
 end
 
-local function suspend(co, result, command)
+function suspend(co, result, command)
 	if not result then
 		local session = session_coroutine_id[co]
 		if session then
@@ -131,11 +130,10 @@ local function suspend(co, result, command)
 		logger.console_info("command nil")
 		return
 	else
-		logger.console_info("error suspend command")
+		logger.console_info("error suspend command %s", tostring(command))
 	end
 end
 
-suspendfunc = suspend
 local function yield_call(service, session)
 	watching_session[session] = service
 	session_id_coroutine[session] = running_thread
@@ -173,7 +171,7 @@ local function raw_dispatch_message(prototype, msg, sz, session, source)
 				return suspend(co, coroutine_resume(co, session, source, p.unpack(msg, sz)))
 			end
 		else
-			print("unknown message type")
+			logger.console_info("unknown message type")
 		end
 	end
 end
@@ -384,9 +382,7 @@ function onbnet.init_service(start)
 	end
 	local ok, err = xpcall(main,  debug.traceback)
 	if not ok then
-		print("service init error", err)
-	else
-		print("service init ok")
+		logger.log_error("service init error: %s", err)
 	end
 end
 

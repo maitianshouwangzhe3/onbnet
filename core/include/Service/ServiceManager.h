@@ -28,6 +28,8 @@ public:
 
     void Init(CConfigFileReader* config);
 
+    void PushglobalMsgQueue(Service* s);
+
     DECLARE_LUA_CLASS(ServiceManager)
     static ServiceManager* inst;
 private:

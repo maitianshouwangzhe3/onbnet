@@ -1,5 +1,6 @@
 
 #include "ChainBuffer.h"
+#include "spinlock.h"
 #include <cstdint>
 #include <memory>
 #include <cstdlib>
@@ -38,6 +39,7 @@ struct Buffer {
 onbnet::ChainBuffer::ChainBuffer() {
     mBuffer = new Buffer();
     ZeroChain();
+    spinlock_init(&lock);
 }
 
 onbnet::ChainBuffer::~ChainBuffer() {
@@ -48,6 +50,7 @@ onbnet::ChainBuffer::~ChainBuffer() {
 }
 
 int onbnet::ChainBuffer::BufferAdd(const void* DataIn, uint32_t Datlen) {
+    spinlock_lock(&lock);
     BufChain *chain, *tmp;
     const uint8_t* data = static_cast<const uint8_t*>(DataIn);
     uint32_t remain, to_alloc;
@@ -109,24 +112,31 @@ int onbnet::ChainBuffer::BufferAdd(const void* DataIn, uint32_t Datlen) {
 out:
     result = 0;
 done:
+    spinlock_unlock(&lock);
     return result;
 }
 
 int onbnet::ChainBuffer::BufferRemove(void* data, uint32_t datlen) {
+    spinlock_lock(&lock);
     uint32_t n = BufCopyOut( data, datlen);
+    spinlock_unlock(&lock);
     if (n > 0) {
         if (BufferDrain(n) < 0)
             n = -1;
     }
+    
     return static_cast<int>(n);
 }
 
 int onbnet::ChainBuffer::BufferDrain(uint32_t len) {
+    spinlock_lock(&lock);
     BufChain *chain, *next;
     uint32_t remaining, old_len;
     old_len = mBuffer->TotalLen;
-    if (old_len == 0)
+    if (old_len == 0) {
+        spinlock_unlock(&lock);
         return 0;
+    }
 
     if (len >= old_len) {
         len = old_len;
@@ -158,13 +168,16 @@ int onbnet::ChainBuffer::BufferDrain(uint32_t len) {
     }
     
     // buf->n_del_for_cb += len;
+    spinlock_unlock(&lock);
     return len;
 }
 
 void onbnet::ChainBuffer::BufferFree() {
+    spinlock_lock(&lock);
     if (mBuffer) {
         BufChainFreeAll(mBuffer->First);
     }
+    spinlock_unlock(&lock);
 }
 
 uint32_t onbnet::ChainBuffer::BufferLen() {
@@ -172,16 +185,23 @@ uint32_t onbnet::ChainBuffer::BufferLen() {
 }
 
 int onbnet::ChainBuffer::BufferSearch(const char* sep, const int seplen) {
+    spinlock_lock(&lock);
     BufChain* chain = nullptr;
     int i;
     chain = mBuffer->First;
-    if (!chain)
+    if (!chain) {
+        spinlock_unlock(&lock);
         return 0;
+    }
+        
     int bytes = chain->off;
     while (bytes <= mBuffer->LastReadPos) {
         chain = chain->next;
-        if (!chain)
+        if (!chain) {
+            spinlock_unlock(&lock);
             return 0;
+        }
+            
         bytes += chain->off;
     }
     bytes -= mBuffer->LastReadPos;
@@ -189,6 +209,7 @@ int onbnet::ChainBuffer::BufferSearch(const char* sep, const int seplen) {
     for (i = mBuffer->LastReadPos; i <= mBuffer->TotalLen - seplen; i++) {
         if (CheckSep(chain, from, sep, seplen)) {
             mBuffer->LastReadPos = 0;
+            spinlock_unlock(&lock);
             return i+seplen;
         }
         ++from;
@@ -202,10 +223,12 @@ int onbnet::ChainBuffer::BufferSearch(const char* sep, const int seplen) {
         }
     }
     mBuffer->LastReadPos = i;
+    spinlock_unlock(&lock);
     return 0;
 }
 
 uint8_t* onbnet::ChainBuffer::BufferWriteAtmost() {
+    spinlock_lock(&lock);
     BufChain *chain = nullptr, *next = nullptr, *tmp = nullptr, *last_with_data = nullptr;
     uint8_t *buffer = nullptr;
     uint32_t remaining = 0;
@@ -216,6 +239,7 @@ uint8_t* onbnet::ChainBuffer::BufferWriteAtmost() {
     uint32_t size = mBuffer->TotalLen;
 
     if (chain->off >= size) {
+        spinlock_unlock(&lock);
         return chain->Buffer + chain->misalign;
     }
 
@@ -225,6 +249,7 @@ uint8_t* onbnet::ChainBuffer::BufferWriteAtmost() {
             break;
         remaining -= tmp->off;
     }
+
     if (chain->BufferLen - chain->misalign >= (size_t)size) {
         /* already have enough space in the first chain */
         size_t old_off = chain->off;
@@ -235,6 +260,7 @@ uint8_t* onbnet::ChainBuffer::BufferWriteAtmost() {
         chain = chain->next;
     } else {
         if ((tmp = BufChainNew(size)) == NULL) {
+            spinlock_unlock(&lock);
             return NULL;
         }
         buffer = tmp->Buffer;
@@ -277,6 +303,8 @@ uint8_t* onbnet::ChainBuffer::BufferWriteAtmost() {
         else
             mBuffer->LastWithDatap = &mBuffer->First;
     }
+
+    spinlock_unlock(&lock);
     return tmp->Buffer + tmp->misalign;
 }
 
@@ -368,9 +396,7 @@ uint32_t onbnet::ChainBuffer::BufCopyOut(void* DataOut, uint32_t Datlen) {
 
     while (Datlen && Datlen >= chain->off) {
         uint32_t copylen = chain->off;
-        memcpy(data,
-            chain->Buffer + chain->misalign,
-            copylen);
+        memcpy(data,chain->Buffer + chain->misalign, copylen);
         data += copylen;
         Datlen -= copylen;
 

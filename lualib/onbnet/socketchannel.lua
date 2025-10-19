@@ -222,7 +222,7 @@ local function dispatch_by_order(self)
 			wakeup_all(self, "channel_closed")
 			break
 		end
-
+		
 		local sock = self.__sock
 		if not sock then
 			-- closed by peer
@@ -317,7 +317,7 @@ local function connect_once(self)
 	end
 
 	local function _connect_once(self, addr)
-		local fd,err = socket.open(addr.host, addr.port)
+		local fd, err = socket.open(addr.host, addr.port)
 		if not fd then
 			-- try next one
 			addr = _next_addr()
@@ -336,7 +336,6 @@ local function connect_once(self)
 		if self.__nodelay then
 			socketdriver.nodelay(fd)
 		end
-
 		-- register overload warning
 
 		local overload = self.__overload_notify

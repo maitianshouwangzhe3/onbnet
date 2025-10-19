@@ -1,10 +1,12 @@
 #pragma once
 
+
 #include <memory>
 #include <cstdint>
 
-namespace onbnet {
+#include "spinlock.h"
 
+namespace onbnet {
 #include "CopyAble.h"
 
 struct Buffer;
@@ -52,6 +54,8 @@ private:
 
 private:
     Buffer* mBuffer;
+
+    spinlock lock;
 };
 
 }

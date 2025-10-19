@@ -2,7 +2,7 @@
 #include "Service.h"
 #include "logger.h"
 #include "luna.h"
-#include <iostream>
+#include <atomic>
 #include <stdexcept>
 #include "ServiceManager.h"
 #include "ConfigFileReader.h"
@@ -78,7 +78,12 @@ bool ServiceManager::Send(uint32_t serviceId, std::shared_ptr<Message> msg) {
     auto S = mServiceVector[serviceId];
     if (S) {
         S->PushMessage(msg);
-        queue->Push(S);
+        bool oldv = false;
+        bool newv = true;
+        if (S->Invoke.compare_exchange_weak(oldv, newv, std::memory_order_release, std::memory_order_release)) {
+            queue->Push(S);
+        }
+        
         return true;
     }
     return false;
@@ -98,4 +103,8 @@ int ServiceManager::newService(const char* serviceName) {
 
 void ServiceManager::SetQueue(ProducerConsumerQueue<Service*>* q) {
     queue = q;
+}
+
+void ServiceManager::PushglobalMsgQueue(Service* s) {
+    queue->Push(s);
 }

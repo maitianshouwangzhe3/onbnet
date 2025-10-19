@@ -1,4 +1,5 @@
 
+
 #include "ConnectServer.h"
 #include "ServiceManager.h"
 #include "NetWorkerManager.h"
@@ -105,10 +106,9 @@ int ConnectServer::EventReadHander() {
         data->buffer = nullptr;
         data->id = mSocket->GetFd();
         data->type = static_cast<int>(MessageType::DATA);
-        // msg->data = static_cast<void*>(data);
+        data->ud = nready;
         msg->session = S->ServiceId;
         msg->source = S->ServiceId;
-        // ServiceManagerInst->Send(msg);
         ServiceManagerInst->Send(S->ServiceId, msg);
     }
 

@@ -20,27 +20,27 @@ public:
 
 #define LOGGER onbnet::Logger::inst
 
-#define console_info(msg, ...) onbnet::Logger::inst->mStdoutLogger->info(msg, ##__VA_ARGS__)
+#define console_info(msg, ...) LOGGER->mStdoutLogger->info(msg, ##__VA_ARGS__)
 
-#define console_error(msg, ...) onbnet::Logger::inst->mStdoutLogger->error(msg, ##__VA_ARGS__)
+#define console_error(msg, ...) LOGGER->mStdoutLogger->error(msg, ##__VA_ARGS__)
 
-#define console_warn(msg, ...) onbnet::Logger::inst->mStdoutLogger->warn(msg, ##__VA_ARGS__)
+#define console_warn(msg, ...) LOGGER->mStdoutLogger->warn(msg, ##__VA_ARGS__)
 
-#define console_debug(msg, ...) onbnet::Logger::inst->mStdoutLogger->debug(msg, ##__VA_ARGS__)
+#define console_debug(msg, ...) LOGGER->mStdoutLogger->debug(msg, ##__VA_ARGS__)
 
-#define log_info(msg, ...) onbnet::Logger::inst->mSyncLogger->info(msg, ##__VA_ARGS__)
+#define log_info(msg, ...) LOGGER->mSyncLogger->info(msg, ##__VA_ARGS__)
 
-#define log_error(msg, ...) onbnet::Logger::inst->mSyncLogger->error(msg, ##__VA_ARGS__)
+#define log_error(msg, ...) LOGGER->mSyncLogger->error(msg, ##__VA_ARGS__)
 
-#define log_debug(msg, ...) onbnet::Logger::inst->mSyncLogger->debug(msg, ##__VA_ARGS__)
+#define log_debug(msg, ...) LOGGER->mSyncLogger->debug(msg, ##__VA_ARGS__)
 
-#define log_warn(msg, ...) onbnet::Logger::inst->mSyncLogger->warn(msg, ##__VA_ARGS__)
+#define log_warn(msg, ...) LOGGER->mSyncLogger->warn(msg, ##__VA_ARGS__)
 
 
-#define alog_info(msg, ...) onbnet::Logger::inst->mASyncLogger->info(msg, ##__VA_ARGS__)
+#define alog_info(msg, ...) LOGGER->mASyncLogger->info(msg, ##__VA_ARGS__)
 
-#define alog_error(msg, ...) onbnet::Logger::inst->mASyncLogger->error(msg, ##__VA_ARGS__)
+#define alog_error(msg, ...) LOGGER->mASyncLogger->error(msg, ##__VA_ARGS__)
 
-#define alog_debug(msg, ...) onbnet::Logger::inst->mASyncLogger->debug(msg, ##__VA_ARGS__)
+#define alog_debug(msg, ...) LOGGER->mASyncLogger->debug(msg, ##__VA_ARGS__)
 
-#define alog_warn(msg, ...) onbnet::Logger::inst->mASyncLogger->warn(msg, ##__VA_ARGS__)
+#define alog_warn(msg, ...) LOGGER->mASyncLogger->warn(msg, ##__VA_ARGS__)

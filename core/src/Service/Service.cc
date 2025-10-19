@@ -1,18 +1,21 @@
 
 #include "Service.h"
 #include "Message.h"
+#include "logger.h"
 #include "OnbnetOnLua.h"
+#include "ServiceManager.h"
+
+#include <atomic>
 #include <cstdint>
 #include <cstring>
-#include <iostream>
 #include <memory>
 
 Service::Service(std::string fileName): FileName(fileName), session(10) {
-
+    Invoke.store(false);
 }
 
 Service::~Service() {
-    
+    gqueue.Cancel();
 }
 
 void Service::Init() {
@@ -25,19 +28,28 @@ void Service::Init() {
     LuaState->Init(static_cast<void*>(this), FileName);
 }
 
-void Service::Start() {
-    while (!gqueue.Empty()) {
+bool Service::Start() {
+    int n = gqueue.Size();
+    for (int i = 0; i < n; i++) {
         std::shared_ptr<Message> msg = gqueue.PopPtr();
         if (msg) {
             try {
                 (*LuaState)(msg);
             } catch (...) {
-                
+                log_error("message callback error");
             }
         } else {
-            
+            log_error("Service::Start gqueue.PopPtr() is null");
         }
     }
+
+    if (!gqueue.Empty()) {
+        ServiceManagerInst->PushglobalMsgQueue(this);
+        return true;
+    }
+
+    Invoke.store(false);
+    return false;
 }
 
 void Service::PushMessage(std::shared_ptr<Message> msg) {

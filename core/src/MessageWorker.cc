@@ -1,7 +1,6 @@
 
 #include "Service.h"
 #include "MessageWorker.h"
-#include <iostream>
 MessageWorker::MessageWorker(ProducerConsumerQueue<Service*>* q) {
     gqueue = q;
     mIsStop = false;
