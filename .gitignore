@@ -4,9 +4,7 @@
 /.cache/
 logs/*
 # /3rd/
-# /3rd/jemalloc/
+# /3rd/jemalloc/*
 # /3rd/lua/
-# /3rd/luaJIT/
 # /3rd/luna/
-# /3rd/luajit2/
 # /3rd/lua-serialize/

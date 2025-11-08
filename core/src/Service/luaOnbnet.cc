@@ -1,4 +1,5 @@
 
+
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -15,6 +16,7 @@ extern "C" {
 
 #include "Message.h"
 #include "Service.h"
+#include "luaMongo.h"
 #include "serialize.h"
 #include "luaOnbnet.h"
 #include "luaSocket.h"
@@ -176,6 +178,8 @@ void openOnbnetLibs(lua_State* L) {
     REGISTER_LIBRARYS("onbnet.loggerdriver", luaopen_onbnet_loggerdriver);
 
     REGISTER_LIBRARYS("onbnet.crypt", luaopen_client_crypt);
+
+    REGISTER_LIBRARYS("onbnet.mongodriver", luaopen_onbnet_mongo_driver);
 }
 
 

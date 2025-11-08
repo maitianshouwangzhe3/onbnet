@@ -10,7 +10,6 @@ local base = _G
 local string = require("string")
 local math = require("math")
 local socket = require("socket.core")
-
 local _M = socket
 
 -----------------------------------------------------------------------------
