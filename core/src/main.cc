@@ -1,13 +1,13 @@
 
-#include "Onbnet.h"
-#include "ConfigFileReader.h"
+#include "onbnet.h"
+#include "config_file_reader.h"
 #include "logger.h"
 
 #include <signal.h>
 #include <exception>
 #include <stdexcept>
 void signalHandler(int signum, siginfo_t* info, void* context) {
-    onbnetServerContext->Stop();
+    onbnet_server_context->stop();
 }
 
 int main(int argc, char **argv) {
@@ -26,11 +26,11 @@ int main(int argc, char **argv) {
     }
 
     try {
-        std::shared_ptr<CConfigFileReader> config = std::make_shared<CConfigFileReader>(argv[1]);
-        new onbnetServer(config);
+        std::shared_ptr<onbnet::util::config_file_reader> config = std::make_shared<onbnet::util::config_file_reader>(argv[1]);
+        new onbnet_server(config);
 
-        onbnetServerContext->Init();
-        onbnetServerContext->Start();
+        onbnet_server_context->init();
+        onbnet_server_context->start();
     } catch (const std::runtime_error& e) {
         log_error("runtime error: {}", e.what());
     } catch (std::exception e) {
