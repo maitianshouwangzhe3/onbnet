@@ -19,3 +19,6 @@
 [submodule "3rd/md5"]
 	path = 3rd/md5
 	url = https://github.com/lunarmodules/md5.git
+[submodule "3rd/sol2"]
+	path = 3rd/sol2
+	url = https://github.com/ThePhD/sol2.git
