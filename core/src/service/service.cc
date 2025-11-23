@@ -19,7 +19,7 @@ service::~service() {
 }
 
 void service::init() {
-    lua_state_ = new onbnet_on_lua();
+    lua_state_ = new_onbnet_on_lua();
     intptr_t p = (intptr_t)this;
     memcpy(lua_getextraspace(lua_state_->lua_state_), &p, LUA_EXTRASPACE);
     lua_state_->lua_path_ = lua_path_;

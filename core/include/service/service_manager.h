@@ -9,6 +9,7 @@
 #include "luna.h"
 #include "export.h"
 #include "message.h"
+#include "FileWatch.hpp"
 #include "config_file_reader.h"
 #include "producer_consumer_queue.h"
 
@@ -32,6 +33,9 @@ public:
 
     DECLARE_LUA_CLASS(service_manager)
     static service_manager* inst;
+
+private:
+    void push_hotfix(std::string& name);
 private:
     uint32_t max_service_id;
     std::vector<service*> service_vector_;
@@ -39,8 +43,11 @@ private:
     std::string lua_path_;
     std::string cpath_;
     std::string service_path_;
+    std::string script_dir_;
 
+    std::mutex watch_mutex_;
     producer_consumer_queue<service*>* queue;
+    std::unique_ptr<filewatch::FileWatch<std::string>> file_watch_;
 };
 
 #define service_manager_inst service_manager::inst

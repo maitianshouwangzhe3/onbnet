@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sstream>
+#include <algorithm>
 onbnet::util::cstr_explode::cstr_explode(char *str, char seperator) {
     item_cnt_ = 1;
     char *pos = str;
@@ -238,4 +239,36 @@ const char* onbnet::util::mem_find(const char *src_str, size_t src_len, const ch
         }
     }
     return NULL;
+}
+
+std::string onbnet::util::path_to_lua_script_name(std::string path, std::string_view prefix2remove)
+{
+	std::string result = path;
+
+	// 路径标准化
+	std::replace(result.begin(), result.end(), '/', '.');
+	std::replace(result.begin(), result.end(), '\\', '.');
+
+	// 移除脚本路径前缀
+	if (!prefix2remove.empty())
+	{
+		auto prefix = std::string(prefix2remove) + ".";
+		if (result.find(prefix) == 0)
+		{
+			result.erase(0, prefix.length());
+		}
+	}
+
+	// 移除拓展名
+	std::size_t last_dot_pos = result.find_last_of('.');
+	if (last_dot_pos != std::string::npos && last_dot_pos > 0)
+	{
+		std::size_t last_slash_pos = result.find_last_of("/\\");
+		if (last_slash_pos == std::string::npos || last_dot_pos > last_slash_pos)
+		{
+			result.erase(last_dot_pos);
+		}
+	}
+
+	return result;
 }

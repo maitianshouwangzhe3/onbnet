@@ -5,3 +5,4 @@ lua_service=./service/?.lua
 max_connect=1024
 threads=4
 bootstrap=main
+lua_watch_dir=test

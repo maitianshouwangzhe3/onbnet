@@ -15,7 +15,7 @@ void socket_worker::start() {
     while (!is_stop_) {
         std::vector<onbnet::net::event> events;
         int ret = net_worker_manager_inst->poll(events, 50);
-        if (ret < 0) {
+        if (ret <= 0) {
             continue;
         }
 

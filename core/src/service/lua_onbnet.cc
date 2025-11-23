@@ -148,6 +148,14 @@ static int lnew_session(lua_State *L) {
     return 1;
 }
 
+static int lhotfix_unpack(lua_State *L) {
+    void* data = lua_touserdata(L,1);
+    int len = luaL_checkinteger(L,2);
+    lua_pushinteger(L, len);
+    lua_pushlstring(L, (char*)data, len);
+    return 2;
+}
+
 extern "C" { 
 LUAMOD_API int luaopen_onbnet_core(lua_State *L) {
 	luaL_checkversion(L);
@@ -160,6 +168,7 @@ LUAMOD_API int luaopen_onbnet_core(lua_State *L) {
         {"self", lself},
         {"sleep", lsleep},
         {"new_session", lnew_session},
+        {"hotfix_unpack", lhotfix_unpack},
 		{ NULL, NULL },
 	};
 

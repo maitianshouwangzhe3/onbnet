@@ -2,6 +2,7 @@
 local cpp_onbnet = require "onbnet.core"
 local seri = require "onbnet.seri"
 local logger = require "onbnet.logger"
+local hf = require "onbnet.hotfix"
 local proto = {}
 local onbnet = {
     PTYPE_TEXT = 0,
@@ -171,6 +172,9 @@ local function raw_dispatch_message(prototype, msg, sz, session, source)
 				return suspend(co, coroutine_resume(co, session, source, p.unpack(msg, sz)))
 			end
 		else
+			if prototype == onbnet.PTYPE_SNAX then
+				return
+			end
 			logger.console_info("unknown message type")
 		end
 	end
@@ -225,7 +229,7 @@ function onbnet.start(start_func)
 end
 
 function onbnet.new_service(name)
-    return onbnet.service_manager.newService(name)
+    return onbnet.service_manager.new_service(name)
 end
 
 function onbnet.send(addr, typename, ...)
@@ -384,6 +388,27 @@ function onbnet.init_service(start)
 	if not ok then
 		logger.log_error("service init error: %s", err)
 	end
+end
+
+function onbnet.on_hotfix()
+	local hf_class = {}
+	hf_class.name = "hotfix"
+    hf_class.id = onbnet.PTYPE_SNAX
+	hf_class.pack = function () end
+	hf_class.unpack = cpp_onbnet.hotfix_unpack
+    register(hf_class)
+
+	onbnet.dispatch("hotfix", function(_, _, _, name, sz)
+        local ok, err = pcall(hf.hotfix_module, name)
+		if not ok then
+			logger.log_error("hotfix_module error: %s", err)
+		end
+    end)
+end
+
+function onbnet.off_hotfix(name)
+	proto["hotfix"] = nil
+	proto[onbnet.PTYPE_SNAX] = nil
 end
 
 return onbnet

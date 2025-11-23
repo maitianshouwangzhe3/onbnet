@@ -155,11 +155,11 @@ void onbnet_on_lua::callback() {
 	lua_xmove(lua_state_, cb_context_->L, 1);
 }
 
-onbnet_on_lua* newonbnet_on_lua() {
+onbnet_on_lua* new_onbnet_on_lua() {
     onbnet_on_lua* luaL = new onbnet_on_lua();
     lstate* ud = new lstate;
     ud->mem = 0;
     ud->mem_level = MEMLVL;
-    luaL->lua_state_ = lua_newstate(lua_alloc, ud, 0);
+    luaL->lua_state_ = lua_newstate(lua_alloc, ud);
     return luaL;
 }

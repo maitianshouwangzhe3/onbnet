@@ -1,11 +1,14 @@
 
+#include "util.h"
 #include "service.h"
 #include "logger.h"
 #include "luna.h"
 #include <atomic>
+#include <cstring>
 #include <stdexcept>
 #include "service_manager.h"
 #include "config_file_reader.h"
+
 
 LUA_EXPORT_CLASS_BEGIN(service_manager)
 LUA_EXPORT_METHOD(new_service)
@@ -29,6 +32,9 @@ service_manager::~service_manager() {
 void service_manager::init(onbnet::util::config_file_reader* config) {
     max_service_id = 0;
     service_vector_.reserve(24);
+    for (int i = 0; i < 24; i++) {
+        service_vector_[i] = nullptr;
+    }
 
     char* tmp = config->get_config_name("lua_path");
     if (tmp) {
@@ -49,6 +55,56 @@ void service_manager::init(onbnet::util::config_file_reader* config) {
         service_path_ = tmp;
     } else {
         throw std::runtime_error("lua_service not found");
+    }
+
+    tmp = config->get_config_name("lua_watch_dir");
+    if (tmp && strlen(tmp) != 0) {
+        script_dir_ = tmp;
+        file_watch_ = std::make_unique<filewatch::FileWatch<std::string>>(script_dir_, [this](const std::string &path, const filewatch::Event change_type)
+	{
+		std::string script_name = onbnet::util::path_to_lua_script_name(path, script_dir_);
+        if (script_name.empty()) {
+			return;
+		}
+
+		std::lock_guard<std::mutex> lock{watch_mutex_};
+
+		switch (change_type)
+		{
+		case filewatch::Event::added:
+		case filewatch::Event::renamed_new:
+		{
+			break;
+		}
+		case filewatch::Event::removed:
+		case filewatch::Event::renamed_old:
+		{
+			break;
+		}
+		case filewatch::Event::modified:
+		{
+            push_hotfix(script_name);
+			break;
+		}
+		default:
+			break;
+		}
+	});
+    }
+}
+
+void service_manager::push_hotfix(std::string& name) {
+    for (int i = 0; i < 24; ++i) {
+        auto S = service_vector_[i];
+        if (S) {
+            std::shared_ptr<message> msg = std::make_shared<message>(name.size());
+            msg->type = static_cast<int>(message_type::SNAX);
+            msg->sz = name.size();
+            memcpy(msg->data, name.c_str(), msg->sz);
+            msg->session = S->service_id_;
+            msg->source = S->service_id_;
+            service_manager_inst->send(S->service_id_, msg);
+        }
     }
 }
 

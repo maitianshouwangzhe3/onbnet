@@ -13,7 +13,7 @@ onbnet.start(
     function()
         -- test = onbnet.new_service("test_redis")
         -- test = onbnet.new_service("test_mysql")
-        print("hello world")
+        test = onbnet.new_service("test_echo")
         -- local fd = socket.listen("", 8001)
         -- socket.start(fd, on_accept)
         -- test = onbnet.new_service("test_mongodb")
